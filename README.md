@@ -46,7 +46,14 @@ available to Docker Engine.
 
 You'll need to have [docker and docker-compose installed](https://materialize.com/docs/third-party/docker) before getting started.
 
-1. Bring up the Docker Compose containers in the background:
+1. Clone this repo and navigate to the directory by running:
+
+   ```shell session
+   git clone https://github.com/MaterializeInc/ecommerce-demo.git
+   cd ecommerce-demo
+   ```
+
+2. Bring up the Docker Compose containers in the background:
 
     ```shell session
     docker-compose up -d
@@ -54,7 +61,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     **This may take several minutes to complete the first time you run it.** If all goes well, you'll have everything running in their own containers, with Debezium configured to ship changes from MySQL into Kafka.
 
-2. Launch the Materialize CLI.
+3. Launch the Materialize CLI.
 
     ```shell session
     docker-compose run mzcli
@@ -62,7 +69,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
      _(This is just a shortcut to a docker container with postgres-client pre-installed, if you already have psql you could run `psql -U materialize -h localhost -p 6875 materialize`)_
 
-3. Now that you're in the Materialize CLI, define all of the tables in `mysql.shop` as Kafka sources:
+4. Now that you're in the Materialize CLI, define all of the tables in `mysql.shop` as Kafka sources:
 
     ```sql
     CREATE SOURCE purchases
@@ -83,7 +90,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     Because these sources are pulling message schema data from the registry, materialize knows the column types to use for each attribute.
 
-4. We'll also want to create a JSON-formatted source for the pageviews:
+5. We'll also want to create a JSON-formatted source for the pageviews:
 
     ```sql
     CREATE SOURCE json_pageviews
@@ -108,7 +115,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     materialize=> 
     ```
 
-5. Next we will create our first Materialized View, summarizing pageviews by item:
+6. Next we will create our first Materialized View, summarizing pageviews by item:
 
     ```sql
     CREATE MATERIALIZED VIEW item_pageviews AS
@@ -141,7 +148,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
        (regexp_match((data->'url')::STRING, '/products/(\d+)')[1])::INT AS item_id,
        ```
 
-6. Now if you select results from the view, you should see data populating:
+7. Now if you select results from the view, you should see data populating:
 
     ```sql
     SELECT * FROM item_pageviews ORDER BY pageviews DESC LIMIT 10;
@@ -149,7 +156,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     If you re-run it a few times you should see the pageview counts changing as new data comes in and gets materialized in real time.
 
-7. Let's create some more materialized views:
+8. Let's create some more materialized views:
 
     **Purchase Summary:**
 
@@ -236,7 +243,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     (6 rows)
     ```
 
-8. Now you've materialized some views that we can use in a business intelligence tool, metabase, and in a graphQL API (postgraphile.) Close out of the Materialize CLI (<kbd>Ctrl</kbd> + <kbd>D</kbd>).
+9. Now you've materialized some views that we can use in a business intelligence tool, metabase, and in a graphQL API (postgraphile.) Close out of the Materialize CLI (<kbd>Ctrl</kbd> + <kbd>D</kbd>).
 
 ## Business Intelligence: Metabase
 
