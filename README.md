@@ -1,17 +1,17 @@
 # Real-Time E-Commerce Demo
 
-This app demonstrates the real-time incremental computation capabilities of Materialize in an e-commerce website.
+This app demonstrates the real-time incremental computation capabilities of Materialize in the context of an e-commerce website.
 
 **An e-commerce business wants to understand:**
 
 - **Order trends** throughout the day to discern patterns.
-- What is selling the most?
+- **What is selling the most?**
   - Understand supply/demand and manage inventory.
   - Show inventory status in the website to encourage users to buy.
 - **Conversion Funnel:** Effectiveness of the website in converting pageviews to actual buys.
 - **Low-stock Alerts:** Generate alerts and automatically place orders to the warehouse if a specific item is close to running out of stock
 
-We'll build materialized views that answer most of the questions by providing data in a business intelligence dashboard, and we'll pipe data out to an API to provide answers to the other questions.
+We'll build materialized views that answer most of the questions by providing data in a [business intelligence dashboard](#business-intelligence-metabase), and we'll pipe data out to a [graphQL API](#graphql-api-postgraphile) to provide answers to the other questions.
 
 To generate the data we'll simulate **users**, **items**, **purchases** and **pageviews** on a fictional e-commerce website.
 
@@ -43,6 +43,8 @@ available to Docker Engine.
 1. Click **Apply and Restart**.
 
 ## Running the Demo
+
+You'll need to have [docker and docker-compose installed](https://materialize.com/docs/third-party/docker) before getting started.
 
 1. Bring up the Docker Compose containers in the background:
 
@@ -79,7 +81,7 @@ available to Docker Engine.
     ENVELOPE DEBEZIUM;
     ```
 
-    Because these sources are pulling message schema data from the registry, materialize automatically knows the column types to use for each attribute.
+    Because these sources are pulling message schema data from the registry, materialize knows the column types to use for each attribute.
 
 4. We'll also want to create a JSON-formatted source for the pageviews:
 
@@ -89,7 +91,7 @@ available to Docker Engine.
     FORMAT BYTES;
     ```
 
-    With JSON-formatted messages, we don't know the schema so the JSON is pulled in as raw bytes and we still need to CAST data into the proper columns and types. We'll show that in the step below.
+    With JSON-formatted messages, we don't know the schema so the [JSON is pulled in as raw bytes](https://materialize.com/docs/sql/create-source/json-kafka/) and we still need to CAST data into the proper columns and types. We'll show that in the step below.
 
     Now if you run `SHOW SOURCES;` in the CLI, you should see the four sources we created:
 
@@ -123,14 +125,17 @@ available to Docker Engine.
 
     As you can see here, we are doing a couple extra steps to get the pageview data into the format we need:
 
-    1. We are converting from raw bytes to utf8 encoded text:
+    1. We are converting from raw bytes to utf8 encoded text to [jsonb](https://materialize.com/docs/sql/types/jsonb/#main):
 
        ```sql
-       SELECT convert_from(data, 'utf8') AS data
+       SELECT CAST(data AS jsonb) AS data
+        FROM (
+            SELECT convert_from(data, 'utf8') AS data
             FROM json_pageviews
+        )
         ```
 
-    2. We are using postgres JSON notation (`data->'url'`), type casts (`::STRING`) and regexp_match function to extract only the item_id from the raw pageview URL.
+    2. We are using postgres JSON notation (`data->'url'`), type casts (`::STRING`) and [regexp_match](<https://materialize.com/docs/sql/functions/#string-func:~:text=regexp_match(haystack>) function to extract only the item_id from the raw pageview URL.
 
        ```sql
        (regexp_match((data->'url')::STRING, '/products/(\d+)')[1])::INT AS item_id,
