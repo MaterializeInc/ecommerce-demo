@@ -34,13 +34,17 @@ that is exactly what this demo will show.
 
 ## Prepping Mac Laptops
 
+| **M1 Mac Warning**  |
+| ------------- |
+| This demo relies heavily on Docker images from several different sources, we haven't tested it on Apple M1 Silicon yet, which is known to have Docker compatibility issues. |
+
 If you're on a Mac laptop, you might want to increase the amount of memory
 available to Docker Engine.
 
 1. From the Docker Desktop menu bar app, select **Preferences**.
-1. Go to the **Advanced** tab.
-1. Select at least **8 GiB** of **Memory**.
-1. Click **Apply and Restart**.
+2. Go to the **Advanced** tab.
+3. Select at least **8 GiB** of **Memory**.
+4. Click **Apply and Restart**.
 
 ## Running the Demo
 
