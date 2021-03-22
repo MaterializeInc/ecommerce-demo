@@ -216,10 +216,12 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     CREATE MATERIALIZED VIEW trending_items AS
         SELECT
             p1.item_id,
-            SUM(CASE WHEN p2.items_sold > p1.items_sold THEN 1 ELSE 0 END) as trend_rank
-        FROM purchase_summary p1
-        FULL JOIN purchase_summary p2 ON 1 = 1
-        GROUP BY 1;
+            (
+                SELECT COUNT(*)
+                FROM purchase_summary p2
+                WHERE p2.items_sold > p1.items_sold
+            ) as trend_rank
+        FROM purchase_summary p1;
     ```
 
     Lastly, let's bring the trending items and remaining stock views together to expose to our graphql API:
