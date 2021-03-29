@@ -22,10 +22,10 @@ topics=(
 
 echo "${topics[@]}" | xargs -n1 -P8 kafka-topics --zookeeper zookeeper:2181 --create --if-not-exists --partitions 1 --replication-factor 1 --topic
 
-wait-for-it --timeout=60 connect:8083
+wait-for-it --timeout=60 debezium:8083
 wait-for-it --timeout=60 mysql:3306
 
-curl -H 'Content-Type: application/json' connect:8083/connectors --data '{
+curl -H 'Content-Type: application/json' debezium:8083/connectors --data '{
   "name": "mysql-connector",
   "config": {
     "connector.class": "io.debezium.connector.mysql.MySqlConnector",
