@@ -15,9 +15,10 @@ itemPriceMax       = 500
 kafkaHost          = 'kafka:9092'
 kafkaTopic         = 'pageviews'
 channels           = ['organic search', 'paid search', 'referral', 'social', 'display']
+categories         = ['widgets', 'gadgets', 'doodads', 'clearance']
 
 # INSERT TEMPLATES
-item_insert     = "INSERT INTO shop.items (name, price, inventory) VALUES ( %s, %s, %s )"
+item_insert     = "INSERT INTO shop.items (name, category, price, inventory) VALUES ( %s, %s, %s, %s )"
 user_insert     = "INSERT INTO shop.users (email, is_vip) VALUES ( %s, %s )"
 purchase_insert = "INSERT INTO shop.purchases (user_id, item_id, quantity, purchase_price) VALUES ( %s, %s, %s, %s )"
 
@@ -59,6 +60,7 @@ try:
                     (
                         id SERIAL PRIMARY KEY,
                         name VARCHAR(100),
+                        category VARCHAR(100),
                         price DECIMAL(7,2),
                         inventory INT,
                         inventory_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -86,6 +88,7 @@ try:
                 [
                     (
                         barnum.create_nouns(),
+                        random.choice(categories),
                         random.randint(itemPriceMin*100,itemPriceMax*100)/100,
                         random.randint(itemInventoryMin,itemInventoryMax)
                     ) for i in range(itemSeedCount)
