@@ -11,7 +11,7 @@ This app demonstrates the real-time incremental computation capabilities of Mate
 - **Conversion Funnel:** Effectiveness of the website in converting pageviews to actual buys.
 - **Low-stock Alerts:** Generate alerts and automatically place orders to the warehouse if a specific item is close to running out of stock
 
-We'll build materialized views that answer most of the questions by providing data in a [business intelligence dashboard](#business-intelligence-metabase), and we'll pipe data out to a [graphQL API](#graphql-api-postgraphile) to provide answers to the other questions.
+We'll build materialized views that answer most of the questions by providing data in a [business intelligence dashboard](#business-intelligence-metabase).
 
 To generate the data we'll simulate **users**, **items**, **purchases** and **pageviews** on a fictional e-commerce website.
 
@@ -224,7 +224,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
         FROM purchase_summary p1;
     ```
 
-    Lastly, let's bring the trending items and remaining stock views together to expose to our graphql API:
+    Lastly, let's bring the trending items and remaining stock views together to create a view that a user-facing application might read from:
 
     ```sql
     CREATE MATERIALIZED VIEW item_metadata AS
@@ -249,7 +249,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     (6 rows)
     ```
 
-9. Now you've materialized some views that we can use in a business intelligence tool, metabase, and in a graphQL API (postgraphile.) Close out of the Materialize CLI (<kbd>Ctrl</kbd> + <kbd>D</kbd>).
+9. Now you've materialized some views that we can use in a business intelligence tool, metabase, to read and display them in pretty charts. Close out of the Materialize CLI (<kbd>Ctrl</kbd> + <kbd>D</kbd>).
 
 ## Business Intelligence: Metabase
 
@@ -289,35 +289,8 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 10. You can save the output and add it to a dashboard, once you've drafted a dashboard you can manually set the refresh rate to 1 second by adding `#refresh=1` to the end of the URL, here is an example of a real-time dashboard of top-viewed items and top converting items:
 ![](https://user-images.githubusercontent.com/11527560/111679085-5228a780-87f7-11eb-86c5-34bf7b6cdcfb.gif)
 
-## GraphQL API: Postgraphile
-
-Postgraphile is running as middleware that connects to materialize (as if it were a postgres database) and exposes a graphql API to port 5000.
-
-1. In a browser, go to <localhost:5000/graphiql> _(or <IP_ADDRESS:5000/graphiql> if running on a VM)._
-2. This exposes an interactive UI for composing and creating graphql queries, you can use the toggles on the sidebar to create your own query, or you can paste one in like:
-
-```graphql
-query MyQuery {
-allItemMetadata(first: 10, orderBy: TREND_RANK_ASC) {
-    edges {
-    node {
-        id
-        remainingStock
-        trendRank
-    }
-    }
-}
-}
-```
-
-This query is fetching from our realtime materialized view called `item_metadata` and grabbing the top 10 items by trend_rank.
-
-![postgraphile](https://user-images.githubusercontent.com/11527560/111680390-8c467900-87f8-11eb-940a-3c95fd7792d2.png)
-
 ## Conclusion
 
-You now have materialize doing real-time materialized views on a changefeed from a database and pageview events from kafka. You have complex multi-layer views doing JOIN's and aggregations in order to distill the raw data into a form that's useful for downstream applications: metabase and graphQL.
-
-In metabase, you have the ability to create dashboards and reports using the real-time data. And you can use the graphQL API to query real-time data from your website or other client applications.
+You now have materialize doing real-time materialized views on a changefeed from a database and pageview events from kafka. You have complex multi-layer views doing JOIN's and aggregations in order to distill the raw data into a form that's useful for downstream applications. In metabase, you have the ability to create dashboards and reports using the real-time data.
 
 You have a lot of infrastructure running in docker containers, don't forget to run `docker-compose down` to shut everything down!
