@@ -18,7 +18,7 @@ To generate the data we'll simulate **users**, **items**, **purchases** and **pa
 To simplify deploying all of this infrastructure, the demo is enclosed in a series of Docker images glued together via Docker Compose. As a secondary benefit, you can run the demo via Linux, an EC2 VM instance, or a Mac laptop.
 
 The [docker-compose file](docker-compose.yml) spins up containers with the following names, connections and roles:
-![Shop demo infra](https://user-images.githubusercontent.com/11527560/111649810-18e23e80-87db-11eb-96c0-6518ef7b87ba.png)
+![Shop demo infra](ecommerce-demo.png)
 
 ## What to Expect
 
