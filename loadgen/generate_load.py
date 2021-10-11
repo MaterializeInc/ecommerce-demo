@@ -29,7 +29,7 @@ user_insert     = "INSERT INTO shop.users (email, is_vip) VALUES ( %s, %s )"
 purchase_insert = "INSERT INTO shop.purchases (user_id, item_id, quantity, purchase_price) VALUES ( %s, %s, %s, %s )"
 
 #Initialize Debezium (Kafka Connect Component)
-"""requests.post(('http://%s/connectors' % debeziumHostPort),
+requests.post(('http://%s/connectors' % debeziumHostPort),
     json={
         "name": "mysql-connector",
         "config": {
@@ -39,13 +39,13 @@ purchase_insert = "INSERT INTO shop.purchases (user_id, item_id, quantity, purch
             "database.user": mysqlUser,
             "database.password": mysqlPass,
             "database.server.name": mysqlHost,
-            "database.server.id": mysqlHost,
+            "database.server.id": '1234',
             "database.history.kafka.bootstrap.servers": kafkaHostPort,
             "database.history.kafka.topic": "mysql-history",
             "time.precision.mode": "connect"
         }
     }
-)"""
+)
 
 #Initialize Kafka
 producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
