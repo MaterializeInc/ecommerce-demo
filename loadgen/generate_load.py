@@ -56,7 +56,10 @@ producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
 
 #Simplex Noise generates slowly-changing randomness
 simplex = OpenSimplex()
-def simplexRandom(choices):
+def simplexRandomInt(min, max):
+    return int(min + (abs(simplex.noise2d(time.time()/10000, 0)) * (min - max)))
+
+def simplexRandomChoice(choices):
     for idx, val in enumerate(choices):
         if simplex.noise2d(idx, time.time()/10000) > 0:
             return val
@@ -66,7 +69,7 @@ def generatePageview(user_id, product_id):
     return {
         "user_id": user_id,
         "url": f'/products/{product_id}',
-        "channel": simplexRandom(channels),
+        "channel": simplexRandomChoice(channels),
         "received_at": int(time.time())
     }
 
@@ -123,9 +126,9 @@ try:
                 [
                     (
                         barnum.create_nouns(),
-                        simplexRandom(categories),
-                        random.randint(itemPriceMin*100,itemPriceMax*100)/100,
-                        random.randint(itemInventoryMin,itemInventoryMax)
+                        simplexRandomChoice(categories),
+                        simplexRandomInt(itemPriceMin*100,itemPriceMax*100)/100,
+                        simplexRandomInt(itemInventoryMin,itemInventoryMax)
                     ) for i in range(itemSeedCount)
                 ]
             )
@@ -147,7 +150,7 @@ try:
             print("Preparing to loop + seed kafka pageviews and purchases")
             for i in range(purchaseGenCount):
                 # Get a user and item to purchase
-                purchase_item = simplexRandom(item_prices)
+                purchase_item = simplexRandomChoice(item_prices)
                 purchase_user = random.randint(0,userSeedCount-1)
                 purchase_quantity = random.randint(1,5)
 
@@ -156,7 +159,7 @@ try:
 
                 # Write random pageviews
                 for i in range(pageviewMultiplier):
-                    producer.send(kafkaTopic, key=b'test', value=generatePageview(random.randint(0,userSeedCount), random.randint(0,itemSeedCount)))
+                    producer.send(kafkaTopic, key=b'test', value=generatePageview(simplexRandomInt(0,userSeedCount), simplexRandomInt(0,itemSeedCount)))
 
                 # Write purchase row
                 cursor.execute(
