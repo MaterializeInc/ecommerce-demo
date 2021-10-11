@@ -29,6 +29,13 @@ services:
       KAFKA_JMX_PORT: 9991
     ports:
     - 9092:9092
+  schema-registry:
+    image: confluentinc/cp-schema-registry:5.5.3
+    environment:
+     - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper:2181
+     - SCHEMA_REGISTRY_HOST_NAME=schema-registry
+     - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081,http://localhost:8081
+    depends_on: [zookeeper, kafka]
   debezium:
     image: debezium/connect:1.4
     environment:
@@ -43,22 +50,13 @@ services:
     depends_on: [kafka]
     ports:
       - 8083:8083
-  schema-registry:
-    image: confluentinc/cp-schema-registry:5.5.3
-    environment:
-     - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper:2181
-     - SCHEMA_REGISTRY_HOST_NAME=schema-registry
-     - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081,http://localhost:8081
-    depends_on: [zookeeper, kafka]
   metabase:
     image: materialize/metabase:v0.0.5
     depends_on: [materialized]
     ports:
       - 3030:3000
-  connector:
-    build: connector
-  mzcli:
-    image: materialize/cli
   loadgen:
     build: loadgen
-    depends_on: [mysql]
+    depends_on: [mysql, debezium, kafka]
+  mzcli:
+    image: materialize/cli

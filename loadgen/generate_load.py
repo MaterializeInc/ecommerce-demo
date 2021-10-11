@@ -1,6 +1,7 @@
-import barnum, random, time, json
+import barnum, random, time, json, requests
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
+
 
 # CONFIG
 userSeedCount      = 10000
@@ -12,6 +13,10 @@ itemInventoryMin   = 1000
 itemInventoryMax   = 5000
 itemPriceMin       = 5
 itemPriceMax       = 500
+mysqlHost          = 'mysql'
+mysqlPort          = 3306
+mysqlUser          = 'root'
+mysqlPass          = 'debezium'
 kafkaHost          = 'kafka:9092'
 kafkaTopic         = 'pageviews'
 channels           = ['organic search', 'paid search', 'referral', 'social', 'display']
@@ -21,6 +26,26 @@ categories         = ['widgets', 'gadgets', 'doodads', 'clearance']
 item_insert     = "INSERT INTO shop.items (name, category, price, inventory) VALUES ( %s, %s, %s, %s )"
 user_insert     = "INSERT INTO shop.users (email, is_vip) VALUES ( %s, %s )"
 purchase_insert = "INSERT INTO shop.purchases (user_id, item_id, quantity, purchase_price) VALUES ( %s, %s, %s, %s )"
+
+#Initialize Debezium (Kafka Connect Component)
+requests.post('http://debezium:8083/connector',
+    headers={"Content-Type": "application/json"},
+    data={
+        "name": "mysql-connector",
+        "config": {
+            "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+            "database.hostname": mysqlHost,
+            "database.port": mysqlPort,
+            "database.user": mysqlUser,
+            "database.password": mysqlPass,
+            "database.server.name": mysqlHost,
+            "database.server.id": mysqlHost,
+            "database.history.kafka.bootstrap.servers": kafkaHost,
+            "database.history.kafka.topic": "mysql-history",
+            "time.precision.mode": "connect"
+        }
+    }
+)
 
 #Initialize Kafka
 producer = KafkaProducer(bootstrap_servers=[kafkaHost],
@@ -37,9 +62,9 @@ def generatePageview(user_id, product_id):
 
 try:
     with connect(
-        host="mysql",
-        user='root',
-        password='debezium',
+        host=mysqlHost,
+        user=mysqlUser,
+        password=mysqlPass,
     ) as connection:
         with connection.cursor() as cursor:
             print("Initializing shop database...")
