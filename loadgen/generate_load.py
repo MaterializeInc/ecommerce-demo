@@ -1,8 +1,7 @@
-from requests.models import encode_multipart_formdata
 import barnum, random, time, json, requests
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
-from opensimplex import OpenSimplex
+from perlin_noise import PerlinNoise
 
 
 # CONFIG
@@ -55,13 +54,13 @@ producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
                          json.dumps(x).encode('utf-8'))
 
 #Simplex Noise generates slowly-changing randomness
-simplex = OpenSimplex()
+noise = PerlinNoise()
 def simplexRandomInt(min, max):
-    return int(min + (abs(simplex.noise2d(time.time()/10000, 0)) * (min - max)))
+    return int(min + (abs(noise(time.time()/10)) * (min - max)))
 
 def simplexRandomChoice(choices):
     for idx, val in enumerate(choices):
-        if simplex.noise2d(idx, time.time()/10000) > 0:
+        if noise([idx, time.time()/10]) > 0:
             return val
     
 
