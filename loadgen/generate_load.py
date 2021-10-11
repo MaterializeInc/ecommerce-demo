@@ -14,11 +14,12 @@ itemInventoryMax   = 5000
 itemPriceMin       = 5
 itemPriceMax       = 500
 mysqlHost          = 'mysql'
-mysqlPort          = 3306
+mysqlPort          = '3306'
 mysqlUser          = 'root'
 mysqlPass          = 'debezium'
-kafkaHost          = 'kafka:9092'
+kafkaHostPort      = 'kafka:9092'
 kafkaTopic         = 'pageviews'
+debeziumHostPort   = 'debezium:8083'
 channels           = ['organic search', 'paid search', 'referral', 'social', 'display']
 categories         = ['widgets', 'gadgets', 'doodads', 'clearance']
 
@@ -28,9 +29,8 @@ user_insert     = "INSERT INTO shop.users (email, is_vip) VALUES ( %s, %s )"
 purchase_insert = "INSERT INTO shop.purchases (user_id, item_id, quantity, purchase_price) VALUES ( %s, %s, %s, %s )"
 
 #Initialize Debezium (Kafka Connect Component)
-requests.post('http://debezium:8083/connector',
-    headers={"Content-Type": "application/json"},
-    data={
+requests.post(('http://%s' % debeziumHostPort),
+    json={
         "name": "mysql-connector",
         "config": {
             "connector.class": "io.debezium.connector.mysql.MySqlConnector",
@@ -40,7 +40,7 @@ requests.post('http://debezium:8083/connector',
             "database.password": mysqlPass,
             "database.server.name": mysqlHost,
             "database.server.id": mysqlHost,
-            "database.history.kafka.bootstrap.servers": kafkaHost,
+            "database.history.kafka.bootstrap.servers": kafkaHostPort,
             "database.history.kafka.topic": "mysql-history",
             "time.precision.mode": "connect"
         }
@@ -48,7 +48,7 @@ requests.post('http://debezium:8083/connector',
 )
 
 #Initialize Kafka
-producer = KafkaProducer(bootstrap_servers=[kafkaHost],
+producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
                          value_serializer=lambda x: 
                          json.dumps(x).encode('utf-8'))
 
