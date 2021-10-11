@@ -80,10 +80,9 @@ try:
     ) as connection:
         with connection.cursor() as cursor:
             print("Initializing shop database...")
-            cursor.execute('DROP DATABASE IF EXISTS shop;')
-            cursor.execute('CREATE DATABASE shop;')
+            cursor.execute('CREATE DATABASE IF NOT EXISTS shop;')
             cursor.execute(
-                """CREATE TABLE  shop.users
+                """CREATE TABLE IF NOT EXISTS shop.users
                     (
                         id SERIAL PRIMARY KEY,
                         email VARCHAR(255),
@@ -93,7 +92,7 @@ try:
                 );"""
             )
             cursor.execute(
-                """CREATE TABLE shop.items
+                """CREATE TABLE IF NOT EXISTS shop.items
                     (
                         id SERIAL PRIMARY KEY,
                         name VARCHAR(100),
@@ -106,7 +105,7 @@ try:
                 );"""
             )
             cursor.execute(
-                """CREATE TABLE shop.purchases
+                """CREATE TABLE IF NOT EXISTS shop.purchases
                     (
                         id SERIAL PRIMARY KEY,
                         user_id BIGINT UNSIGNED REFERENCES user(id),
