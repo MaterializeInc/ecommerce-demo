@@ -56,12 +56,13 @@ producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
 #Simplex Noise generates slowly-changing randomness
 noise = PerlinNoise()
 def simplexRandomInt(min, max):
-    return int(min + (abs(noise(time.time()/10)) * (min - max)))
+    return int(min + (abs(noise(time.time()/10.0)) * (min - max)))
 
 def simplexRandomChoice(choices):
     for idx, val in enumerate(choices):
-        if noise([idx, time.time()/10]) > 0:
+        if noise([idx*10, time.time()/10.0]) > 0:
             return val
+    return random.choice(choices)
     
 
 def generatePageview(user_id, product_id):
