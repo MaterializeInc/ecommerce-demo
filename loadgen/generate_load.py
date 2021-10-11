@@ -1,6 +1,8 @@
-import barnum, random, time, json, requests, perlin_noise
+from requests.models import encode_multipart_formdata
+import barnum, random, time, json, requests
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
+from opensimplex import OpenSimplex
 
 
 # CONFIG
@@ -52,11 +54,19 @@ producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
                          value_serializer=lambda x: 
                          json.dumps(x).encode('utf-8'))
 
+#Simplex Noise generates slowly-changing randomness
+simplex = OpenSimplex()
+def simplexRandom(choices):
+    for idx, val in enumerate(choices):
+        if simplex.noise2d(idx, time.time()/10000) > 0:
+            return val
+    
+
 def generatePageview(user_id, product_id):
     return {
         "user_id": user_id,
         "url": f'/products/{product_id}',
-        "channel": random.choice(channels),
+        "channel": simplexRandom(channels),
         "received_at": int(time.time())
     }
 
@@ -113,7 +123,7 @@ try:
                 [
                     (
                         barnum.create_nouns(),
-                        random.choice(categories),
+                        simplexRandom(categories),
                         random.randint(itemPriceMin*100,itemPriceMax*100)/100,
                         random.randint(itemInventoryMin,itemInventoryMax)
                     ) for i in range(itemSeedCount)
@@ -137,7 +147,7 @@ try:
             print("Preparing to loop + seed kafka pageviews and purchases")
             for i in range(purchaseGenCount):
                 # Get a user and item to purchase
-                purchase_item = random.choice(item_prices)
+                purchase_item = simplexRandom(item_prices)
                 purchase_user = random.randint(0,userSeedCount-1)
                 purchase_quantity = random.randint(1,5)
 
