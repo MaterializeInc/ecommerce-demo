@@ -1,4 +1,4 @@
-import barnum, random, time, json, requests
+import barnum, random, time, json, requests, perlin_noise
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
 
