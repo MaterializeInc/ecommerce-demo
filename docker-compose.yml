@@ -65,7 +65,7 @@ services:
     environment:
       KAFKA_BROKERS: kafka:9092
       KAFKA_SCHEMAREGISTRY_ENABLED: 'true'
-      KAFKA_SCHEMAREGISTRY_URLS: [http://schema-registry:8081] 
+      KAFKA_SCHEMAREGISTRY_URLS: http://schema-registry:8081
     ports:
     - "8080:8080"
     entrypoint: ./kowl 
