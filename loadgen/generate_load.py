@@ -1,6 +1,7 @@
-import barnum, random, time, json
+import barnum, random, time, json, requests
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
+from noise import pnoise1, pnoise2
 
 # CONFIG
 userSeedCount      = 10000
@@ -12,8 +13,13 @@ itemInventoryMin   = 1000
 itemInventoryMax   = 5000
 itemPriceMin       = 5
 itemPriceMax       = 500
-kafkaHost          = 'kafka:9092'
+mysqlHost          = 'mysql'
+mysqlPort          = '3306'
+mysqlUser          = 'root'
+mysqlPass          = 'debezium'
+kafkaHostPort      = 'kafka:9092'
 kafkaTopic         = 'pageviews'
+debeziumHostPort   = 'debezium:8083'
 channels           = ['organic search', 'paid search', 'referral', 'social', 'display']
 categories         = ['widgets', 'gadgets', 'doodads', 'clearance']
 
@@ -22,31 +28,59 @@ item_insert     = "INSERT INTO shop.items (name, category, price, inventory) VAL
 user_insert     = "INSERT INTO shop.users (email, is_vip) VALUES ( %s, %s )"
 purchase_insert = "INSERT INTO shop.purchases (user_id, item_id, quantity, purchase_price) VALUES ( %s, %s, %s, %s )"
 
+#Initialize Debezium (Kafka Connect Component)
+requests.post(('http://%s/connectors' % debeziumHostPort),
+    json={
+        "name": "mysql-connector",
+        "config": {
+            "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+            "database.hostname": mysqlHost,
+            "database.port": mysqlPort,
+            "database.user": mysqlUser,
+            "database.password": mysqlPass,
+            "database.server.name": mysqlHost,
+            "database.server.id": '1234',
+            "database.history.kafka.bootstrap.servers": kafkaHostPort,
+            "database.history.kafka.topic": "mysql-history",
+            "time.precision.mode": "connect"
+        }
+    }
+)
+
 #Initialize Kafka
-producer = KafkaProducer(bootstrap_servers=[kafkaHost],
+producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
                          value_serializer=lambda x: 
                          json.dumps(x).encode('utf-8'))
+
+#Perlin Noise generates slowly-changing randomness
+def randomInt(min, max):
+    return int(min + (abs(pnoise1((time.time()*10)%1000/1000)) * (max - min)))
+
+def randomChoice(choices):
+    for idx, val in enumerate(choices):
+        if pnoise2((idx+1.1)/len(choices), time.time()%10000) > 0:
+            return val
+    return random.choice(choices)
 
 def generatePageview(user_id, product_id):
     return {
         "user_id": user_id,
         "url": f'/products/{product_id}',
-        "channel": random.choice(channels),
+        "channel": randomChoice(channels),
         "received_at": int(time.time())
     }
 
 try:
     with connect(
-        host="mysql",
-        user='root',
-        password='debezium',
+        host=mysqlHost,
+        user=mysqlUser,
+        password=mysqlPass,
     ) as connection:
         with connection.cursor() as cursor:
             print("Initializing shop database...")
-            cursor.execute('DROP DATABASE IF EXISTS shop;')
-            cursor.execute('CREATE DATABASE shop;')
+            cursor.execute('CREATE DATABASE IF NOT EXISTS shop;')
             cursor.execute(
-                """CREATE TABLE  shop.users
+                """CREATE TABLE IF NOT EXISTS shop.users
                     (
                         id SERIAL PRIMARY KEY,
                         email VARCHAR(255),
@@ -56,7 +90,7 @@ try:
                 );"""
             )
             cursor.execute(
-                """CREATE TABLE shop.items
+                """CREATE TABLE IF NOT EXISTS shop.items
                     (
                         id SERIAL PRIMARY KEY,
                         name VARCHAR(100),
@@ -69,7 +103,7 @@ try:
                 );"""
             )
             cursor.execute(
-                """CREATE TABLE shop.purchases
+                """CREATE TABLE IF NOT EXISTS shop.purchases
                     (
                         id SERIAL PRIMARY KEY,
                         user_id BIGINT UNSIGNED REFERENCES user(id),
@@ -88,9 +122,9 @@ try:
                 [
                     (
                         barnum.create_nouns(),
-                        random.choice(categories),
-                        random.randint(itemPriceMin*100,itemPriceMax*100)/100,
-                        random.randint(itemInventoryMin,itemInventoryMax)
+                        randomChoice(categories),
+                        randomInt(itemPriceMin*100,itemPriceMax*100)/100,
+                        randomInt(itemInventoryMin,itemInventoryMax)
                     ) for i in range(itemSeedCount)
                 ]
             )
@@ -112,7 +146,7 @@ try:
             print("Preparing to loop + seed kafka pageviews and purchases")
             for i in range(purchaseGenCount):
                 # Get a user and item to purchase
-                purchase_item = random.choice(item_prices)
+                purchase_item = randomChoice(item_prices)
                 purchase_user = random.randint(0,userSeedCount-1)
                 purchase_quantity = random.randint(1,5)
 
@@ -121,7 +155,7 @@ try:
 
                 # Write random pageviews
                 for i in range(pageviewMultiplier):
-                    producer.send(kafkaTopic, key=b'test', value=generatePageview(random.randint(0,userSeedCount), random.randint(0,itemSeedCount)))
+                    producer.send(kafkaTopic, key=b'test', value=generatePageview(randomInt(0,userSeedCount), randomInt(0,itemSeedCount)))
 
                 # Write purchase row
                 cursor.execute(
