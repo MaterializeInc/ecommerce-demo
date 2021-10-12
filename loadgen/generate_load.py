@@ -1,8 +1,7 @@
 import barnum, random, time, json, requests
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
-from perlin_noise import PerlinNoise
-
+from noise import pnoise1, pnoise2
 
 # CONFIG
 userSeedCount      = 10000
@@ -53,23 +52,21 @@ producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
                          value_serializer=lambda x: 
                          json.dumps(x).encode('utf-8'))
 
-#Simplex Noise generates slowly-changing randomness
-noise = PerlinNoise()
-def simplexRandomInt(min, max):
-    return int(min + (abs(noise(time.time()/10.0)) * (min - max)))
+#Perlin Noise generates slowly-changing randomness
+def randomInt(min, max):
+    return int(min + (abs(pnoise1((time.time()*10)%1000/1000)) * (max - min)))
 
-def simplexRandomChoice(choices):
+def randomChoice(choices):
     for idx, val in enumerate(choices):
-        if noise([idx*10, time.time()/10.0]) > 0:
+        if pnoise2((idx+1.1)/len(choices), time.time()%10000) > 0:
             return val
     return random.choice(choices)
-    
 
 def generatePageview(user_id, product_id):
     return {
         "user_id": user_id,
         "url": f'/products/{product_id}',
-        "channel": simplexRandomChoice(channels),
+        "channel": randomChoice(channels),
         "received_at": int(time.time())
     }
 
@@ -125,9 +122,9 @@ try:
                 [
                     (
                         barnum.create_nouns(),
-                        simplexRandomChoice(categories),
-                        simplexRandomInt(itemPriceMin*100,itemPriceMax*100)/100,
-                        simplexRandomInt(itemInventoryMin,itemInventoryMax)
+                        randomChoice(categories),
+                        randomInt(itemPriceMin*100,itemPriceMax*100)/100,
+                        randomInt(itemInventoryMin,itemInventoryMax)
                     ) for i in range(itemSeedCount)
                 ]
             )
@@ -149,7 +146,7 @@ try:
             print("Preparing to loop + seed kafka pageviews and purchases")
             for i in range(purchaseGenCount):
                 # Get a user and item to purchase
-                purchase_item = simplexRandomChoice(item_prices)
+                purchase_item = randomChoice(item_prices)
                 purchase_user = random.randint(0,userSeedCount-1)
                 purchase_quantity = random.randint(1,5)
 
@@ -158,7 +155,7 @@ try:
 
                 # Write random pageviews
                 for i in range(pageviewMultiplier):
-                    producer.send(kafkaTopic, key=b'test', value=generatePageview(simplexRandomInt(0,userSeedCount), simplexRandomInt(0,itemSeedCount)))
+                    producer.send(kafkaTopic, key=b'test', value=generatePageview(randomInt(0,userSeedCount), randomInt(0,itemSeedCount)))
 
                 # Write purchase row
                 cursor.execute(
