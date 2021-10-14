@@ -119,19 +119,20 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     materialize=> 
     ```
 
-6. Next we will create our first Materialized View, summarizing pageviews by item:
+6. Next we will create our first Materialized View, summarizing pageviews by item and channel:
 
     ```sql
     CREATE MATERIALIZED VIEW item_pageviews AS
         SELECT
         (regexp_match((data->'url')::STRING, '/products/(\d+)')[1])::INT AS item_id,
+        data->>'channel' as channel,
         COUNT(*) as pageviews
         FROM (
         SELECT CAST(data AS jsonb) AS data
         FROM (
             SELECT convert_from(data, 'utf8') AS data
             FROM json_pageviews
-        )) GROUP BY 1;
+        )) GROUP BY 1, 2;
     ```
 
     As you can see here, we are doing a couple extra steps to get the pageview data into the format we need:
@@ -180,14 +181,16 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     CREATE MATERIALIZED VIEW item_summary AS
         SELECT
             items.name,
-            purchase_summary.items_sold,
-            purchase_summary.orders,
-            purchase_summary.revenue,
-            item_pageviews.pageviews,
-            CASE WHEN item_pageviews.pageviews IS NULL THEN 0.0 ELSE purchase_summary.orders / item_pageviews.pageviews::FLOAT END AS conversion_rate
+            items.category,
+            SUM(purchase_summary.items_sold) as items_sold,
+            SUM(purchase_summary.orders) as orders,
+            SUM(purchase_summary.revenue) as revenue,
+            SUM(item_pageviews.pageviews) as pageviews,
+            SUM(purchase_summary.orders) / SUM(item_pageviews.pageviews)::FLOAT AS conversion_rate
         FROM items
         JOIN purchase_summary ON purchase_summary.item_id = items.id
-        JOIN item_pageviews ON item_pageviews.item_id = items.id;
+        JOIN item_pageviews ON item_pageviews.item_id = items.id
+        GROUP BY 1, 2;
     ```
 
     This view shows some of the JOIN capabilities of Materialize, we're joining our two previous views with items to create a summary of purchases, pageviews, and conversion rates.
@@ -274,7 +277,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
 5. Proceed past the screens until you reach your primary dashboard.
 
-6. Click **Ask a question**.
+6. Click **Ask a question**
 
 7. Click **Native query**.
 

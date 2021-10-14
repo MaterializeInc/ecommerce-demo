@@ -60,13 +60,3 @@ services:
     depends_on: [mysql, debezium, kafka]
   mzcli:
     image: materialize/cli
-  kowl:
-    image: quay.io/cloudhut/kowl:v1.4.0
-    environment:
-      KAFKA_BROKERS: kafka:9092
-      KAFKA_SCHEMAREGISTRY_ENABLED: 'TRUE'
-      KAFKA_SCHEMAREGISTRY_URLS: http://schema-registry:8081
-    ports:
-    - "8080:8080"
-    entrypoint: ./kowl 
-    depends_on: [kafka, schema-registry, zookeeper]
