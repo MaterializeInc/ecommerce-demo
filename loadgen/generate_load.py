@@ -112,8 +112,8 @@ try:
                     (
                         barnum.create_nouns(),
                         random.choice(categories),
-                        random.randInt(itemPriceMin*100,itemPriceMax*100)/100,
-                        random.randInt(itemInventoryMin,itemInventoryMax)
+                        random.randint(itemPriceMin*100,itemPriceMax*100)/100,
+                        random.randint(itemInventoryMin,itemInventoryMax)
                     ) for i in range(itemSeedCount)
                 ]
             )
