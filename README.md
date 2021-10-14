@@ -77,18 +77,18 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     ```sql
     CREATE SOURCE purchases
-    FROM KAFKA BROKER 'kafka:9092' TOPIC 'mysql.shop.purchases'
-    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://schema-registry:8081'
+    FROM KAFKA BROKER 'redpanda:9092' TOPIC 'mysql.shop.purchases'
+    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://redpanda:8081'
     ENVELOPE DEBEZIUM;
 
     CREATE SOURCE items
-    FROM KAFKA BROKER 'kafka:9092' TOPIC 'mysql.shop.items'
-    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://schema-registry:8081'
+    FROM KAFKA BROKER 'redpanda:9092' TOPIC 'mysql.shop.items'
+    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://redpanda:8081'
     ENVELOPE DEBEZIUM;
 
     CREATE SOURCE users
-    FROM KAFKA BROKER 'kafka:9092' TOPIC 'mysql.shop.users'
-    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://schema-registry:8081'
+    FROM KAFKA BROKER 'redpanda:9092' TOPIC 'mysql.shop.users'
+    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://redpanda:8081'
     ENVELOPE DEBEZIUM;
     ```
 
@@ -98,7 +98,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     ```sql
     CREATE SOURCE json_pageviews
-    FROM KAFKA BROKER 'kafka:9092' TOPIC 'pageviews'
+    FROM KAFKA BROKER 'redpanda:9092' TOPIC 'pageviews'
     FORMAT BYTES;
     ```
 
