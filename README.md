@@ -277,7 +277,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
 5. Proceed past the screens until you reach your primary dashboard.
 
-6. Click **Ask a question**.
+6. Click **Ask a question**
 
 7. Click **Native query**.
 
