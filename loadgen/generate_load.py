@@ -1,13 +1,13 @@
-import barnum, random, time, json, requests
+import barnum, random, time, json, requests, math
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
 
 # CONFIG
 userSeedCount      = 10000
 itemSeedCount      = 1000
-purchaseGenCount   = 100000
+purchaseGenCount   = 500000
 purchaseGenEveryMS = 100
-pageviewMultiplier = 75
+pageviewMultiplier = 75       # Translates to 75x purchases, currently 750/sec or 65M/day
 itemInventoryMin   = 1000
 itemInventoryMax   = 5000
 itemPriceMin       = 5
@@ -51,10 +51,10 @@ producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
                          value_serializer=lambda x: 
                          json.dumps(x).encode('utf-8'))
 
-def generatePageview(user_id, product_id):
+def generatePageview(viewer_id, target_id, page_type):
     return {
-        "user_id": user_id,
-        "url": f'/products/{product_id}',
+        "user_id": viewer_id,
+        "url": f'/{page_type}/{target_id}',
         "channel": random.choice(channels),
         "received_at": int(time.time())
     }
@@ -140,11 +140,15 @@ try:
                 purchase_quantity = random.randint(1,5)
 
                 # Write purchaser pageview
-                producer.send(kafkaTopic, key=b'test', value=generatePageview(purchase_user, purchase_item[0]))
+                producer.send(kafkaTopic, key=str(purchase_user).encode('ascii'), value=generatePageview(purchase_user, purchase_item[0], 'products'))
 
-                # Write random pageviews
-                for i in range(pageviewMultiplier):
-                    producer.send(kafkaTopic, key=b'test', value=generatePageview(random.randint(0,userSeedCount), random.randint(0,itemSeedCount)))
+                # Write random pageviews to products or profiles
+                pageviewOscillator = pageviewMultiplier + (math.sin(time.time()/1000)*50)
+                for i in range(pageviewOscillator):
+                    rand_user = random.randint(0,userSeedCount)
+                    rand_page_type = random.choice(['products', 'profiles'])
+                    target_id_max_range = itemSeedCount if rand_page_type == 'products' else userSeedCount
+                    producer.send(kafkaTopic, key=str(rand_user).encode('ascii'), value=generatePageview(rand_user, random.randint(0,target_id_max_range), rand_page_type))
 
                 # Write purchase row
                 cursor.execute(
@@ -160,7 +164,6 @@ try:
 
                 #Pause
                 time.sleep(purchaseGenEveryMS/1000)
-
 
     connection.close()
 

@@ -15,7 +15,7 @@ services:
      - MYSQL_USER=mysqluser
      - MYSQL_PASSWORD=mysqlpw
   redpanda:
-    image: docker.vectorized.io/vectorized/redpanda:v21.9.3
+    image: docker.vectorized.io/vectorized/redpanda:v21.9.5
     command:
      - redpanda start
      - --overprovisioned
@@ -46,11 +46,6 @@ services:
     depends_on: [redpanda]
     ports:
       - 8083:8083
-  metabase:
-    image: materialize/metabase:v0.0.5
-    depends_on: [materialized]
-    ports:
-      - 3030:3000
   loadgen:
     build: loadgen
     depends_on: [mysql, debezium, redpanda]
