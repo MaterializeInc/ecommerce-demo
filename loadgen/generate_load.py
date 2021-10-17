@@ -143,7 +143,7 @@ try:
                 producer.send(kafkaTopic, key=str(purchase_user).encode('ascii'), value=generatePageview(purchase_user, purchase_item[0], 'products'))
 
                 # Write random pageviews to products or profiles
-                pageviewOscillator = pageviewMultiplier + (math.sin(time.time()/1000)*50)
+                pageviewOscillator = int(pageviewMultiplier + (math.sin(time.time()/1000)*50))
                 for i in range(pageviewOscillator):
                     rand_user = random.randint(0,userSeedCount)
                     rand_page_type = random.choice(['products', 'profiles'])
