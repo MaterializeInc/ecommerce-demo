@@ -28,6 +28,8 @@ services:
      - --advertise-kafka-addr redpanda:9092
      - --pandaproxy-addr 0.0.0.0:8082
      - --advertise-pandaproxy-addr redpanda:8082
+     - --enable_transactions true
+     - --enable_idempotence true
     ports:
      - 9092:9092
      - 8081:8081
