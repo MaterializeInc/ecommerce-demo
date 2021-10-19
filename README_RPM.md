@@ -43,21 +43,35 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 5. Exec in to the redpanda container to look around using redpanda's amazing [rpk]() CLI.
 
    ```shell session
-   docker-compose exec redpanda /bin/bash
+   docker-compose -f docker-compose-rpm.yml exec redpanda /bin/bash
    
    rpk debug info
 
    rpk topic list
 
-   rpk topic pageviews consume
+   rpk topic consume pageviews
+
+   rpk topic create dd_flagged_profiles
    ```
 
+   You should see a live feed of JSON formatted pageview kafka messages:
+
+   ```
+    {
+        "key": "3290",
+        "message": "{\"user_id\": 3290, \"url\": \"/products/257\", \"channel\": \"social\", \"received_at\": 1634651213}",
+        "partition": 0,
+        "offset": 21529,
+        "size": 89,
+        "timestamp": "2021-10-19T13:46:53.15Z"
+    }
+    ```
 
 
 6. Launch the Materialize CLI.
 
     ```shell session
-    docker-compose run mzcli
+    docker-compose -f docker-compose-rpm.yml run mzcli
     ```
 
      _(This is just a shortcut to a docker container with postgres-client pre-installed, if you already have psql you could run `psql -U materialize -h localhost -p 6875 materialize`)_
@@ -229,14 +243,29 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
         JOIN users viewers ON last_five_profile_views.profile_viewer_id = viewers.id;
     ```
 
+    We can test this by checking on profile views for a specific user:
+
+    ```sql
+    SELECT * FROM last_five_profile_views_enriched WHERE owner_id=25;
+    ```
+
+    We can see the reactivity here by exiting MZ and running a watch command in one terminal:
+
+    ```bash session
+    watch -n1 "psql -c 'SELECT * FROM last_five_profile_views_enriched WHERE owner_id=25;' -U materialize -h localhost -p 6875"
+    ```
+
+    and logging into mysql and updating the email of a flagged user in another:
+
+    ```sql
+    mysql -u root -pdebezium -h 127.0.0.1 shop
+
+    UPDATE users SET email='hi@hi.com' WHERE id=ID_SEEN_IN_VIEW;
+    ```
+
 10. **Demand-driven query:** Since redpanda has such a nice HTTP interface, it makes it easier to extend without writing lots of glue code and services. Here's an example where we use pandaproxy to do a ["demand-driven query"]().
 
-    Exec into the redpanda container and create a new topic with `rpk`
-    ```bash session
-    docker-compose exec redpanda /bin/bash
-
-    rpk topic create `dd_flagged_profiles`
-    ```
+    Add a message to the `dd_flagged_profiles` topic using curl and pandaproxy:
 
     ```curl
     curl -s \
@@ -246,11 +275,13 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     -d '{
     "records":[{
             "key":"0",
-            "value":"420",
+            "value":"25",
             "partition":0
         }]
     }'
     ```
+
+    Now let's materialize that data and join the flagged_profile id to a much larger dataset.
 
     ```sql
     CREATE MATERIALIZED SOURCE dd_flagged_profiles
@@ -259,47 +290,53 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     ENVELOPE UPSERT;
     
     CREATE MATERIALIZED VIEW dd_flagged_profile_view AS
-        SELECT *
-        FROM (
-                SELECT CAST(data AS jsonb) AS data
-                FROM (
-                    SELECT convert_from(data, 'utf8') AS data
-                    FROM dd_flagged_profiles
-                )
-            ) flagged_profiles
-        JOIN pageview_stg ON target_id = (flagged_profiles.data->'id')::INT;
+        SELECT pageview_stg.*
+        FROM dd_flagged_profiles
+        JOIN pageview_stg ON user_id = btrim(text, '"')::INT;
     ```
 
-    SINK:
-    ```
+    This pattern is useful for scenarios where materializing all the data (without filtering down to certain profiles) puts too much of a memory demand on the system.
+
+11. Sink data back out to Redpanda: 
+
+    Let's create a view that flags "high-value" users that have spent $10k or more total. 
+
+    ```sql
     CREATE MATERIALIZED VIEW high_value_users AS
       SELECT
         users.id,
         users.email,
-        SUM(purchase_price * quantity) AS lifetime_value,
+        SUM(purchase_price * quantity)::int AS lifetime_value,
         COUNT(*) as purchases
       FROM users
       JOIN purchases ON purchases.user_id = users.id
       GROUP BY 1,2
       HAVING SUM(purchase_price * quantity) > 10000; 
+    ```
 
+    and then a sink to stream updates to this view back out to redpanda
+
+    ```sql
     CREATE SINK high_value_users_sink
         FROM high_value_users
         INTO KAFKA BROKER 'redpanda:9092' TOPIC 'high-value-users-sink'
-        FORMAT JSON;
+        WITH (reuse_topic=true, consistency_topic='high-value-users-sink-consistency')
+        FORMAT AVRO USING
+        CONFLUENT SCHEMA REGISTRY 'http://redpanda:8081';
+    ```
 
+    This is a bit more complex because it is an `exactly-once` sink. This means that across materialize restarts, it will never output the same update more than once.
+
+    We won't be able to preview the results with `rpk` because it's AVRO formatted. But we can actually stream it BACK into Materialize to confirm the format!
 
     ```sql
-    CREATE MATERIALIZED VIEW pageviews_per_second_last_15 AS
-      SELECT
-        date_trunc('second', to_timestamp(received_at)) as received_at_second,
-        COUNT(*) as pageviews
-      FROM pageview_stg
-      WHERE mz_logical_timestamp() < (extract('epoch' from date_trunc('second', to_timestamp(received_at))) * 1000 + 15000)::numeric
-      GROUP BY 1;
+    CREATE MATERIALIZED SOURCE hvu_test
+    FROM KAFKA BROKER 'redpanda:9092' TOPIC 'high-value-users-sink'
+    FORMAT AVRO USING CONFLUENT SCHEMA REGISTRY 'http://redpanda:8081';
 
-    watch -n1 "psql -c 'SELECT * FROM pageviews_per_second_last_15 ORDER BY received_at_minute ASC;' -h localhost -U materialize -p 6875"
+    SELECT * FROM hvu_test LIMIT 2;
     ```
+
 
 ## Conclusion
 
