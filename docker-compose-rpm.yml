@@ -49,7 +49,7 @@ services:
     ports:
       - 8083:8083
   loadgen:
-    build: loadgen
+    build: loadgen_redpanda
     depends_on: [mysql, debezium, redpanda]
   mzcli:
     image: materialize/cli

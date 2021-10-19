@@ -56,7 +56,7 @@ services:
     ports:
       - 3030:3000
   loadgen:
-    build: loadgen
+    build: loadgen_kafka
     depends_on: [mysql, debezium, kafka]
   mzcli:
     image: materialize/cli
