@@ -2,6 +2,8 @@
 
 This is a variation of the standard demo, illustrating how it looks to switch from Kafka to Redpanda.
 
+![Shop demo infra with redpanda](ecommerce-demo-rpm.png)
+
 **NOTE:** For context on what is happening in the demo, and initial setup instructions, see the [README](README.md).
 
 ## Running Redpanda + Materialize Stack
