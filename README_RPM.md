@@ -1,10 +1,10 @@
 # Redpanda + Materialize Demo
 
-This is a variation of the standard demo, illustrating how it looks to switch from Kafka to Redpanda.
+This is a variation of the [standard demo](https://github.com/MaterializeInc/ecommerce-demo), illustrating how it looks to switch from Kafka to Redpanda.
 
 ![Shop demo infra with redpanda](ecommerce-demo-rpm.png)
 
-**NOTE:** For context on what is happening in the demo, and initial setup instructions, see the [README](README.md).
+**NOTE:** For context on what is happening in the demo, and initial setup instructions, see the [README](https://github.com/MaterializeInc/ecommerce-demo#readme).
 
 ## Running Redpanda + Materialize Stack
 
@@ -17,10 +17,10 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
    cd ecommerce-demo
    ```
 
-2. Bring up the Docker Compose containers in the background:
+2. Bring up the Docker Compose containers in the background. Every `docker-compose` command must include `-f docker-compose-rpm.yml` to ensure we're using the redpanda docker-compose-rpm.yml, and not the default Kafka.
 
     ```shell session
-    docker-compose -f docker-compose-rpm.yml up -d
+    docker-compose -f docker-compose-rpm.yml up -d --no-build
     ```
 
     **This may take several minutes to complete the first time you run it.** If all goes well, you'll have everything running in their own containers, with Debezium configured to ship changes from MySQL into Redpanda.
@@ -35,6 +35,8 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 4. Log in to MySQL to confirm that tables are created and seeded:
 
     ```shell session
+    docker-compose -f docker-compose-rpm.yml exec mysql /bin/bash
+
     mysql -u root -pdebezium -h 127.0.0.1 shop 
 
     SHOW TABLES;
@@ -51,9 +53,9 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
    rpk topic list
 
-   rpk topic consume pageviews
-
    rpk topic create dd_flagged_profiles
+
+   rpk topic consume pageviews
    ```
 
    You should see a live feed of JSON formatted pageview kafka messages:
@@ -193,7 +195,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     SELECT * FROM item_summary ORDER BY pageviews DESC LIMIT 5;
     ```
 
-    Or we can even check that it's incrementally updating by running a watch command on that query:
+    Or we can even check that it's incrementally updating by exiting out of materialize and running a watch command on that query:
 
     ```bash session
     watch -n1 "psql -c 'SELECT * FROM item_summary ORDER BY pageviews DESC LIMIT 5;' -U materialize -h localhost -p 6875"
@@ -202,13 +204,13 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
 9.  **Views for User-Facing Data:** 
 
-    Since Redpanda will often be used in building rich data-intensive applications, let's try creating a view meant to power something like the "Who has viewed your profile" feature on Linkedin:
+    Redpanda will often be used in building rich data-intensive applications, let's try creating a view meant to power something like the "Who has viewed your profile" feature on Linkedin:
     
     User views of other user profiles
     ```sql
     CREATE MATERIALIZED VIEW profile_views_per_minute_last_10 AS
         SELECT
-        target_id,
+        target_id as user_id,
         date_trunc('minute', to_timestamp(received_at)) as received_at_minute,
         COUNT(*) as pageviews
         FROM pageview_stg
@@ -218,51 +220,47 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
         GROUP BY 1, 2;
     ```
 
-    Get the last five users to have viewed each profile:
+    We can check it with: 
 
     ```sql
-    CREATE MATERIALIZED VIEW last_five_profile_views AS
+    SELECT * FROM profile_views_per_minute_last_10 WHERE user_id = 10;
+    ```
+    and confirm that this is the data we could use to populate a "profile views" graph for user `10`.
+
+
+    Next let's use a `LATERAL` join to get the last five users to have viewed each profile:
+
+    ```sql
+    CREATE MATERIALIZED VIEW profile_views AS
         SELECT
-            target_id AS profile_owner_id,
-            user_id AS profile_viewer_id
+            target_id AS owner_id,
+            user_id AS viewer_id,
+            received_at AS received_at
         FROM (SELECT DISTINCT target_id FROM pageview_stg) grp,
         LATERAL (
-            SELECT user_id FROM pageview_stg
+            SELECT user_id, received_at FROM pageview_stg
             WHERE target_id = grp.target_id
-            ORDER BY received_at DESC LIMIT 5
+            ORDER BY received_at DESC LIMIT 10
         );
     ```
 
     ```sql
-    CREATE MATERIALIZED VIEW last_five_profile_views_enriched AS
+    CREATE MATERIALIZED VIEW profile_views_enriched AS
         SELECT
             owner.id as owner_id,
             owner.email as owner_email,
             viewers.id as viewer_id,
-            viewers.email as viewer_email
-        FROM last_five_profile_views
-        JOIN users owner ON last_five_profile_views.profile_owner_id = owner.id
-        JOIN users viewers ON last_five_profile_views.profile_viewer_id = viewers.id;
+            viewers.email as viewer_email,
+            profile_views.received_at
+        FROM profile_views
+        JOIN users owner ON profile_views.owner_id = owner.id
+        JOIN users viewers ON profile_views.viewer_id = viewers.id;
     ```
 
     We can test this by checking on profile views for a specific user:
 
     ```sql
-    SELECT * FROM last_five_profile_views_enriched WHERE owner_id=25;
-    ```
-
-    We can see the reactivity here by exiting MZ and running a watch command in one terminal:
-
-    ```bash session
-    watch -n1 "psql -c 'SELECT * FROM last_five_profile_views_enriched WHERE owner_id=25;' -U materialize -h localhost -p 6875"
-    ```
-
-    and logging into mysql and updating the email of a flagged user in another:
-
-    ```sql
-    mysql -u root -pdebezium -h 127.0.0.1 shop
-
-    UPDATE users SET email='hi@hi.com' WHERE id=ID_SEEN_IN_VIEW;
+    SELECT * FROM profile_views_enriched WHERE owner_id=25 ORDER BY received_at DESC;
     ```
 
 10. **Demand-driven query:** Since redpanda has such a nice HTTP interface, it makes it easier to extend without writing lots of glue code and services. Here's an example where we use pandaproxy to do a ["demand-driven query"]().
@@ -344,4 +342,4 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
 You now have materialize doing real-time materialized views on a changefeed from a database and pageview events from Redpanda. You have complex multi-layer views doing JOIN's and aggregations in order to distill the raw data into a form that's useful for downstream applications. In metabase, you have the ability to create dashboards and reports using the real-time data.
 
-You have a lot of infrastructure running in docker containers, don't forget to run `docker-compose down` to shut everything down!
+You have a lot of infrastructure running in docker containers, don't forget to run `docker-compose -f docker-compose-rpm.yml down` to shut everything down!
