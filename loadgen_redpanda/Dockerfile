@@ -7,7 +7,7 @@ RUN curl -fsSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wa
 
 RUN pip install barnum kafka-python mysql-connector-python requests noise
 
-COPY . /loadgen_redpanda
+COPY . /loadgen
 
 COPY docker-entrypoint.sh /usr/local/bin
 
