@@ -1,4 +1,4 @@
-import barnum, random, time, json, requests, math
+import barnum, random, time, json, requests, math, os
 from mysql.connector import connect, Error
 from kafka import KafkaProducer
 
@@ -16,7 +16,7 @@ mysqlHost          = 'mysql'
 mysqlPort          = '3306'
 mysqlUser          = 'root'
 mysqlPass          = 'debezium'
-kafkaHostPort      = 'redpanda:9092'
+kafkaHostPort      = os.getenv('KAFKA_ADDR', 'kafka:9092')
 kafkaTopic         = 'pageviews'
 debeziumHostPort   = 'debezium:8083'
 channels           = ['organic search', 'paid search', 'referral', 'social', 'display']
@@ -48,7 +48,7 @@ requests.post(('http://%s/connectors' % debeziumHostPort),
 
 #Initialize Kafka
 producer = KafkaProducer(bootstrap_servers=[kafkaHostPort],
-                         value_serializer=lambda x: 
+                         value_serializer=lambda x:
                          json.dumps(x).encode('utf-8'))
 
 def generatePageview(viewer_id, target_id, page_type):
