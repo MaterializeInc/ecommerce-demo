@@ -18,7 +18,7 @@ To generate the data we'll simulate **users**, **items**, **purchases** and **pa
 To simplify deploying all of this infrastructure, the demo is enclosed in a series of Docker images glued together via Docker Compose. As a secondary benefit, you can run the demo via Linux, an EC2 VM instance, or a Mac laptop.
 
 The [docker-compose file](docker-compose.yml) spins up containers with the following names, connections and roles:
-![Shop demo infra](ecommerce-demo.png)
+![Shop demo infra](https://user-images.githubusercontent.com/23521087/147531054-d584906b-57b4-419c-bf74-ec1681bd384c.png)
 
 ## What to Expect
 
@@ -71,7 +71,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     docker-compose run mzcli
     ```
 
-     _(This is just a shortcut to a docker container with postgres-client pre-installed, if you already have psql you could run `psql -U materialize -h localhost -p 6875 materialize`)_
+     _(This is just a shortcut to a Docker container with postgres-client pre-installed, if you already have psql you could run `psql -U materialize -h localhost -p 6875 materialize`)_
 
 4. Now that you're in the Materialize CLI, define all of the tables in `mysql.shop` as Kafka sources:
 
@@ -92,7 +92,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     ENVELOPE DEBEZIUM;
     ```
 
-    Because these sources are pulling message schema data from the registry, materialize knows the column types to use for each attribute.
+    Because these sources are pulling message schema data from the registry, Materialize knows the column types to use for each attribute.
 
 5. We'll also want to create a JSON-formatted source for the pageviews:
 
@@ -108,7 +108,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     ```
     materialize=> SHOW SOURCES;
-        name      
+        name
     ----------------
     items
     json_pageviews
@@ -116,10 +116,10 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     users
     (4 rows)
 
-    materialize=> 
+    materialize=>
     ```
 
-6. Next we will create our first Materialized View, summarizing pageviews by item and channel:
+6. Next we will create our first materialized view, summarizing pageviews by item and channel:
 
     ```sql
     CREATE MATERIALIZED VIEW item_pageviews AS
@@ -241,7 +241,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     ```
     materialize=> SHOW VIEWS;
-       name       
+       name
     ------------------
     item_metadata
     item_pageviews
@@ -252,7 +252,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     (6 rows)
     ```
 
-9. Now you've materialized some views that we can use in a business intelligence tool, metabase, to read and display them in pretty charts. Close out of the Materialize CLI (<kbd>Ctrl</kbd> + <kbd>D</kbd>).
+9. Now you've materialized some views that we can use in a business intelligence tool, Metabase, to read and display them in pretty charts. Close out of the Materialize CLI (<kbd>Ctrl</kbd> + <kbd>D</kbd>).
 
 ## Business Intelligence: Metabase
 
@@ -267,7 +267,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     Field             | Enter...
     ----------------- | ----------------
-    Database          | **Materialize**
+    Database          | **PostgreSQL**
     Name              | **shop**
     Host              | **materialized**
     Port              | **6875**
@@ -294,6 +294,6 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
 ## Conclusion
 
-You now have materialize doing real-time materialized views on a changefeed from a database and pageview events from kafka. You have complex multi-layer views doing JOIN's and aggregations in order to distill the raw data into a form that's useful for downstream applications. In metabase, you have the ability to create dashboards and reports using the real-time data.
+You now have Materialize doing real-time materialized views on a changefeed from a database and pageview events from Kafka. You have complex multi-layer views doing JOINs and aggregations in order to distill the raw data into a form that's useful for downstream applications. In Metabase, you have the ability to create dashboards and reports using the real-time data.
 
-You have a lot of infrastructure running in docker containers, don't forget to run `docker-compose down` to shut everything down!
+You have a lot of infrastructure running in Docker containers, don't forget to run `docker-compose down` to shut everything down!

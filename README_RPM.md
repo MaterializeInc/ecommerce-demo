@@ -2,7 +2,7 @@
 
 This is a variation of the [standard demo](https://github.com/MaterializeInc/ecommerce-demo), illustrating how it looks to switch from Kafka to Redpanda.
 
-![Shop demo infra with redpanda](ecommerce-demo-rpm.png)
+![Shop demo infra with redpanda](https://user-images.githubusercontent.com/23521087/147529958-c175f78f-4208-4201-a062-c3d353ec1666.png)
 
 **NOTE:** For context on what is happening in the demo, and initial setup instructions, see the [README](https://github.com/MaterializeInc/ecommerce-demo#readme).
 
@@ -35,7 +35,13 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 4. Log in to MySQL to confirm that tables are created and seeded:
 
     ```shell session
+<<<<<<< HEAD
     docker-compose -f docker-compose-rpm.yml run mysql mysql -uroot -pdebezium -h mysql shop
+=======
+    docker-compose -f docker-compose-rpm.yml exec mysql /bin/bash
+
+    mysql -u root -pdebezium -h 127.0.0.1 shop
+>>>>>>> 1059252 (Minor fixes to README_RPM.)
 
     SHOW TABLES;
 
@@ -101,7 +107,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     FORMAT BYTES;
     ```
 
-    Because the first three sources are pulling message schema data from the registry, materialize knows the column types to use for each attribute. The last source is a JSON-formatted source for the pageviews.
+    Because the first three sources are pulling message schema data from the registry, Materialize knows the column types to use for each attribute. The last source is a JSON-formatted source for the pageviews.
 
     Now if you run `SHOW SOURCES;` in the CLI, you should see the four sources we created:
 
@@ -118,7 +124,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     materialize=>
     ```
 
-7. Next we will create a NON-materialized View, you can almost think of this as a reusable template to be used in other materialized view.
+7. Next we will create a NON-materialized view, you can almost think of this as a reusable template to be used in other materialized view.
 
     ```sql
     CREATE VIEW pageview_stg AS
@@ -193,7 +199,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     SELECT * FROM item_summary ORDER BY pageviews DESC LIMIT 5;
     ```
 
-    Or we can even check that it's incrementally updating by exiting out of materialize and running a watch command on that query:
+    Or we can even check that it's incrementally updating by exiting out of Materialize and running a watch command on that query:
 
     ```bash session
     watch -n1 "psql -c 'SELECT * FROM item_summary ORDER BY pageviews DESC LIMIT 5;' -U materialize -h localhost -p 6875"
@@ -323,7 +329,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
         CONFLUENT SCHEMA REGISTRY 'http://redpanda:8081';
     ```
 
-    This is a bit more complex because it is an `exactly-once` sink. This means that across materialize restarts, it will never output the same update more than once.
+    This is a bit more complex because it is an `exactly-once` sink. This means that across Materialize restarts, it will never output the same update more than once.
 
     We won't be able to preview the results with `rpk` because it's AVRO formatted. But we can actually stream it BACK into Materialize to confirm the format!
 
@@ -338,6 +344,6 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
 ## Conclusion
 
-You now have materialize doing real-time materialized views on a changefeed from a database and pageview events from Redpanda. You have complex multi-layer views doing JOIN's and aggregations in order to distill the raw data into a form that's useful for downstream applications. In metabase, you have the ability to create dashboards and reports using the real-time data.
+You now have Materialize doing real-time materialized views on a changefeed from a database and pageview events from Redpanda. You have complex multi-layer views doing JOIN's and aggregations in order to distill the raw data into a form that's useful for downstream applications.
 
 You have a lot of infrastructure running in docker containers, don't forget to run `docker-compose -f docker-compose-rpm.yml down` to shut everything down!
