@@ -58,7 +58,7 @@ services:
     depends_on:
       kafka: { condition: service_healthy }
   metabase:
-    image: materialize/metabase:v0.0.5
+    image: metabase/metabase
     depends_on: [materialized]
     ports:
       - 3030:3000
