@@ -20,7 +20,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 2. Bring up the Docker Compose containers in the background. Every `docker-compose` command must include `-f docker-compose-rpm.yml` to ensure we're using the redpanda docker-compose-rpm.yml, and not the default Kafka.
 
     ```shell session
-    docker-compose -f docker-compose-rpm.yml up -d --no-build
+    docker-compose -f docker-compose-rpm.yml up -d
     ```
 
     **This may take several minutes to complete the first time you run it.** If all goes well, you'll have everything running in their own containers, with Debezium configured to ship changes from MySQL into Redpanda.
@@ -35,9 +35,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 4. Log in to MySQL to confirm that tables are created and seeded:
 
     ```shell session
-    docker-compose -f docker-compose-rpm.yml exec mysql /bin/bash
-
-    mysql -u root -pdebezium -h 127.0.0.1 shop 
+    docker-compose -f docker-compose-rpm.yml run mysql mysql -uroot -pdebezium -h mysql shop
 
     SHOW TABLES;
 
@@ -48,7 +46,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
    ```shell session
    docker-compose -f docker-compose-rpm.yml exec redpanda /bin/bash
-   
+
    rpk debug info
 
    rpk topic list
@@ -109,7 +107,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     ```
     materialize=> SHOW SOURCES;
-        name      
+        name
     ----------------
     items
     json_pageviews
@@ -117,7 +115,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     users
     (4 rows)
 
-    materialize=> 
+    materialize=>
     ```
 
 7. Next we will create a NON-materialized View, you can almost think of this as a reusable template to be used in other materialized view.
@@ -150,7 +148,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
    Start simple with a materialized view that aggregates purchase stats by item:
 
    ```sql
-   CREATE MATERIALIZED VIEW purchases_by_item AS 
+   CREATE MATERIALIZED VIEW purchases_by_item AS
         SELECT
             item_id,
             SUM(purchase_price) as revenue,
@@ -162,7 +160,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     and something similar that uses our `pageview_stg` static view to quickly aggregate pageviews by item:
 
     ```sql
-   CREATE MATERIALIZED VIEW pageviews_by_item AS 
+   CREATE MATERIALIZED VIEW pageviews_by_item AS
         SELECT
             target_id as item_id,
             COUNT(*) AS pageviews
@@ -202,10 +200,10 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     ```
 
 
-9.  **Views for User-Facing Data:** 
+9.  **Views for User-Facing Data:**
 
     Redpanda will often be used in building rich data-intensive applications, let's try creating a view meant to power something like the "Who has viewed your profile" feature on Linkedin:
-    
+
     User views of other user profiles
     ```sql
     CREATE MATERIALIZED VIEW profile_views_per_minute_last_10 AS
@@ -220,7 +218,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
         GROUP BY 1, 2;
     ```
 
-    We can check it with: 
+    We can check it with:
 
     ```sql
     SELECT * FROM profile_views_per_minute_last_10 WHERE user_id = 10;
@@ -288,7 +286,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
     FROM KAFKA BROKER 'redpanda:9092' TOPIC 'dd_flagged_profiles'
     FORMAT TEXT
     ENVELOPE UPSERT;
-    
+
     CREATE MATERIALIZED VIEW dd_flagged_profile_view AS
         SELECT pageview_stg.*
         FROM dd_flagged_profiles
@@ -297,9 +295,9 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 
     This pattern is useful for scenarios where materializing all the data (without filtering down to certain profiles) puts too much of a memory demand on the system.
 
-11. Sink data back out to Redpanda: 
+11. Sink data back out to Redpanda:
 
-    Let's create a view that flags "high-value" users that have spent $10k or more total. 
+    Let's create a view that flags "high-value" users that have spent $10k or more total.
 
     ```sql
     CREATE MATERIALIZED VIEW high_value_users AS
@@ -311,7 +309,7 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
       FROM users
       JOIN purchases ON purchases.user_id = users.id
       GROUP BY 1,2
-      HAVING SUM(purchase_price * quantity) > 10000; 
+      HAVING SUM(purchase_price * quantity) > 10000;
     ```
 
     and then a sink to stream updates to this view back out to redpanda
