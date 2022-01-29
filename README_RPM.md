@@ -35,14 +35,10 @@ You'll need to have [docker and docker-compose installed](https://materialize.co
 4. Log in to MySQL to confirm that tables are created and seeded:
 
     ```shell session
-<<<<<<< HEAD
     docker-compose -f docker-compose-rpm.yml run mysql mysql -uroot -pdebezium -h mysql shop
-=======
-    docker-compose -f docker-compose-rpm.yml exec mysql /bin/bash
-
-    mysql -u root -pdebezium -h 127.0.0.1 shop
->>>>>>> 1059252 (Minor fixes to README_RPM.)
-
+    ```
+    
+    ```sql
     SHOW TABLES;
 
     SELECT * FROM purchases LIMIT 1;
